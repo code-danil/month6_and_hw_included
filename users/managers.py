@@ -22,7 +22,7 @@ class CustomUserManager(BaseUserManager):
             raise ValueError("Superuser must have is_superuser true")
         if extra_fields.get("is_active") is not True:
             raise ValueError("Superuser must have is_active true")
-        if not extra_fields.get('phone_number'):
-            raise ValueError("Superuser must have phone_number")
+        # if not extra_fields.get('phone_number'):
+        #     raise ValueError("Superuser must have phone_number")
 
         return self.create_user(email, password, **extra_fields)
