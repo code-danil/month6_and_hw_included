@@ -8,8 +8,6 @@ from rest_framework.authtoken.models import Token
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 
-
-from .models import ConfirmationCode
 from .serializers import (
     AuthValidateSerializer,
     ConfirmationSerializer,
@@ -17,8 +15,10 @@ from .serializers import (
     CustomTokenObtainPairSerializer,
 
 )
+from django.core.cache import cache
 from rest_framework_simplejwt.views import TokenObtainPairView
 CustomUser = get_user_model()
+from users.tasks import add
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -29,6 +29,8 @@ class AuthorizationAPIView(CreateAPIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        add(6,9)
+        add.delay(6,9)
         serializer = AuthValidateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -53,6 +55,7 @@ class AuthorizationAPIView(CreateAPIView):
 class RegistrationAPIView(CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = RegisterValidateSerializer
+   
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -61,6 +64,7 @@ class RegistrationAPIView(CreateAPIView):
         email = serializer.validated_data["email"]
         password = serializer.validated_data["password"]
         birthdate = serializer.validated_data["birthdate"]
+        
 
         # Use transaction to ensure data consistency
         with transaction.atomic():
@@ -71,7 +75,7 @@ class RegistrationAPIView(CreateAPIView):
             # Create a random 6-digit code
             code = "".join(random.choices(string.digits, k=6))
 
-            confirmation_code = ConfirmationCode.objects.create(user=user, code=code)
+            cache.set(f"confirmation_code:{user.id}", code, timeout=300)
 
         return Response(
             status=status.HTTP_201_CREATED,
@@ -96,7 +100,7 @@ class ConfirmUserAPIView(CreateAPIView):
 
             token, _ = Token.objects.get_or_create(user=user)
 
-            ConfirmationCode.objects.filter(user=user).delete()
+            cache.delete(f"confirmation_code:{user.id}")
 
         return Response(
             status=status.HTTP_200_OK,

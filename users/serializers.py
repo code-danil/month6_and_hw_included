@@ -1,8 +1,8 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from .models import ConfirmationCode
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.core.cache import cache
 
 
 CustomUser = get_user_model()
@@ -52,12 +52,12 @@ class ConfirmationSerializer(serializers.Serializer):
         except CustomUser.DoesNotExist:
             raise ValidationError('CustomUser не существует!')
 
-        try:
-            confirmation_code = ConfirmationCode.objects.get(user=user)
-        except ConfirmationCode.DoesNotExist:
-            raise ValidationError('Код подтверждения не найден!')
+        saved_code = cache.get(f"confirmation_code:{user_id}")
 
-        if confirmation_code.code != code:
+        if saved_code is None:
+            raise ValidationError('Код подтверждения не найден или истёк!')
+
+        if saved_code != code:
             raise ValidationError('Неверный код подтверждения!')
 
         return attrs
