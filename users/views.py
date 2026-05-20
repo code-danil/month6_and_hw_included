@@ -18,7 +18,8 @@ from .serializers import (
 from django.core.cache import cache
 from rest_framework_simplejwt.views import TokenObtainPairView
 CustomUser = get_user_model()
-from users.tasks import add
+from users.tasks import add, send_otp_mail
+from users.tasks import generate_promo_code, send_welcome_email
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -29,8 +30,11 @@ class AuthorizationAPIView(CreateAPIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        add(6,9)
-        add.delay(6,9)
+
+        # from time import sleep
+        # sleep(15)
+        add(8,2)
+        add.delay(8,2)
         serializer = AuthValidateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -76,6 +80,11 @@ class RegistrationAPIView(CreateAPIView):
             code = "".join(random.choices(string.digits, k=6))
 
             cache.set(f"confirmation_code:{user.id}", code, timeout=300)
+            send_otp_mail.delay(email=email, otp=code)
+            # Домашний задание снизу
+            generate_promo_code.delay(email)
+            send_welcome_email.delay(email)
+            
 
         return Response(
             status=status.HTTP_201_CREATED,
@@ -101,6 +110,7 @@ class ConfirmUserAPIView(CreateAPIView):
             token, _ = Token.objects.get_or_create(user=user)
 
             cache.delete(f"confirmation_code:{user.id}")
+           
 
         return Response(
             status=status.HTTP_200_OK,

@@ -61,3 +61,5 @@ class ConfirmationSerializer(serializers.Serializer):
             raise ValidationError('Неверный код подтверждения!')
 
         return attrs
+    
+    
